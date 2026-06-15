@@ -1,5 +1,6 @@
 import { MapPin, Chrome as Home, ImageOff } from "lucide-react";
 import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
 
 interface Listing {
   title: string;

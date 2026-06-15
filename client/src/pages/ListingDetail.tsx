@@ -1,5 +1,5 @@
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, MapPin, Chrome as Home, ExternalLink, Loader as Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Loader as Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import listings from "@/data/listings.json";
