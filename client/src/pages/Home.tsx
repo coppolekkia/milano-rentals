@@ -16,22 +16,24 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [priceFilter, setPriceFilter] = useState<"all" | "under700" | "700to800" | "over800">("all");
 
-  // Filter listings based on search and price
+  // Filter listings based on search and price, preserving original index
   const filteredListings = useMemo(() => {
-    return (listings as Listing[]).filter((listing) => {
-      const matchesSearch =
-        listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.price.toLowerCase().includes(searchTerm.toLowerCase());
+    return (listings as Listing[])
+      .map((listing, originalIndex) => ({ listing, originalIndex }))
+      .filter(({ listing }) => {
+        const matchesSearch =
+          listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          listing.price.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const priceNum = parseInt(listing.price.replace(/[^0-9]/g, ""));
-      let matchesPrice = true;
+        const priceNum = parseInt(listing.price.replace(/[^0-9]/g, ""));
+        let matchesPrice = true;
 
-      if (priceFilter === "under700") matchesPrice = priceNum < 700;
-      else if (priceFilter === "700to800") matchesPrice = priceNum >= 700 && priceNum <= 800;
-      else if (priceFilter === "over800") matchesPrice = priceNum > 800;
+        if (priceFilter === "under700") matchesPrice = priceNum < 700;
+        else if (priceFilter === "700to800") matchesPrice = priceNum >= 700 && priceNum <= 800;
+        else if (priceFilter === "over800") matchesPrice = priceNum > 800;
 
-      return matchesSearch && matchesPrice;
-    });
+        return matchesSearch && matchesPrice;
+      });
   }, [searchTerm, priceFilter]);
 
   return (
@@ -125,9 +127,9 @@ export default function Home() {
         {/* Listings Grid */}
         {filteredListings.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredListings.map((listing, index) => (
-              <div key={index} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                <ListingCard listing={listing} />
+            {filteredListings.map(({ listing, originalIndex }, index) => (
+              <div key={originalIndex} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+                <ListingCard listing={listing} index={originalIndex} />
               </div>
             ))}
           </div>

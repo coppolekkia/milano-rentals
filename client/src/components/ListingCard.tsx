@@ -1,5 +1,5 @@
-import { MapPin, Home, ImageOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MapPin, Chrome as Home, ImageOff } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface Listing {
   title: string;
@@ -8,7 +8,8 @@ interface Listing {
   image: string;
 }
 
-export default function ListingCard({ listing }: { listing: Listing }) {
+export default function ListingCard({ listing, index }: { listing: Listing; index: number }) {
+  const [, setLocation] = useLocation();
   // Estrae l'indirizzo dal titolo (tutto prima dell'ultima virgola)
   const addressParts = listing.title.split(",");
   const address = addressParts.slice(0, -1).join(",").trim();
@@ -20,12 +21,17 @@ export default function ListingCard({ listing }: { listing: Listing }) {
   // Verifica se l'immagine è valida
   const hasValidImage = listing.image && listing.image.trim() !== "";
 
+  const handleOpen = () => {
+    setLocation(`/annuncio/${index}`);
+  };
+
   return (
-    <a
-      href={listing.link}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group block h-full"
+    <div
+      className="group block h-full cursor-pointer"
+      onClick={handleOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") handleOpen(); }}
     >
       <div className="h-full flex flex-col bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 hover:scale-105 transform">
         {/* Image Container */}
@@ -81,15 +87,12 @@ export default function ListingCard({ listing }: { listing: Listing }) {
           {/* Button */}
           <Button
             className="mt-auto w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold"
-            onClick={(e) => {
-              e.preventDefault();
-              window.open(listing.link, "_blank");
-            }}
+            onClick={handleOpen}
           >
             Visualizza Annuncio
           </Button>
         </div>
       </div>
-    </a>
+    </div>
   );
 }
