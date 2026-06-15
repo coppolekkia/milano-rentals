@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
-import { Search, MapPin } from "lucide-react";
+import { Search, MapPin, X } from "lucide-react";
 import ListingCard from "@/components/ListingCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import listings from "@/data/listings.json";
+import { getAllZones, getAllPropertyTypes, filterListings } from "@/lib/listingFilters";
+import { useFavorites } from "@/hooks/useFavorites";
 
 interface Listing {
   title: string;
@@ -15,26 +17,39 @@ interface Listing {
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [priceFilter, setPriceFilter] = useState<"all" | "under700" | "700to800" | "over800">("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [zoneFilter, setZoneFilter] = useState("all");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  // Filter listings based on search and price, preserving original index
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+
+  const zones = useMemo(() => getAllZones(), []);
+  const propertyTypes = useMemo(() => getAllPropertyTypes(), []);
+
+  // Filter listings based on search and filters
   const filteredListings = useMemo(() => {
-    return (listings as Listing[])
-      .map((listing, originalIndex) => ({ listing, originalIndex }))
-      .filter(({ listing }) => {
-        const matchesSearch =
-          listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          listing.price.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const priceNum = parseInt(listing.price.replace(/[^0-9]/g, ""));
-        let matchesPrice = true;
-
-        if (priceFilter === "under700") matchesPrice = priceNum < 700;
-        else if (priceFilter === "700to800") matchesPrice = priceNum >= 700 && priceNum <= 800;
-        else if (priceFilter === "over800") matchesPrice = priceNum > 800;
-
-        return matchesSearch && matchesPrice;
+    let result = filterListings(searchTerm, priceFilter, typeFilter, zoneFilter);
+    
+    // Filtra per preferiti se richiesto
+    if (showFavoritesOnly) {
+      result = result.filter((listing) => {
+        const originalIndex = (listings as Listing[]).indexOf(listing);
+        return isFavorite(originalIndex);
       });
-  }, [searchTerm, priceFilter]);
+    }
+
+    return result;
+  }, [searchTerm, priceFilter, typeFilter, zoneFilter, showFavoritesOnly, favorites]);
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setPriceFilter("all");
+    setTypeFilter("all");
+    setZoneFilter("all");
+    setShowFavoritesOnly(false);
+  };
+
+  const hasActiveFilters = searchTerm || priceFilter !== "all" || typeFilter !== "all" || zoneFilter !== "all" || showFavoritesOnly;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -76,40 +91,105 @@ export default function Home() {
       {/* Filters */}
       <section className="bg-white border-b border-gray-200 sticky top-20 z-40">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm font-semibold text-gray-700">Filtra per prezzo:</span>
-            <Button
-              variant={priceFilter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPriceFilter("all")}
-              className={priceFilter === "all" ? "bg-blue-700 hover:bg-blue-800" : ""}
-            >
-              Tutti
-            </Button>
-            <Button
-              variant={priceFilter === "under700" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPriceFilter("under700")}
-              className={priceFilter === "under700" ? "bg-blue-700 hover:bg-blue-800" : ""}
-            >
-              Sotto 700€
-            </Button>
-            <Button
-              variant={priceFilter === "700to800" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPriceFilter("700to800")}
-              className={priceFilter === "700to800" ? "bg-blue-700 hover:bg-blue-800" : ""}
-            >
-              700-800€
-            </Button>
-            <Button
-              variant={priceFilter === "over800" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPriceFilter("over800")}
-              className={priceFilter === "over800" ? "bg-blue-700 hover:bg-blue-800" : ""}
-            >
-              Oltre 800€
-            </Button>
+          <div className="space-y-4">
+            {/* Price Filters */}
+            <div>
+              <span className="text-sm font-semibold text-gray-700 block mb-2">Filtra per prezzo:</span>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={priceFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPriceFilter("all")}
+                  className={priceFilter === "all" ? "bg-blue-700 hover:bg-blue-800" : ""}
+                >
+                  Tutti
+                </Button>
+                <Button
+                  variant={priceFilter === "under700" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPriceFilter("under700")}
+                  className={priceFilter === "under700" ? "bg-blue-700 hover:bg-blue-800" : ""}
+                >
+                  Sotto 700€
+                </Button>
+                <Button
+                  variant={priceFilter === "700to800" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPriceFilter("700to800")}
+                  className={priceFilter === "700to800" ? "bg-blue-700 hover:bg-blue-800" : ""}
+                >
+                  700-800€
+                </Button>
+                <Button
+                  variant={priceFilter === "over800" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPriceFilter("over800")}
+                  className={priceFilter === "over800" ? "bg-blue-700 hover:bg-blue-800" : ""}
+                >
+                  Oltre 800€
+                </Button>
+              </div>
+            </div>
+
+            {/* Type and Zone Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Type Filter */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 block mb-2">Tipo di immobile:</label>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-700"
+                >
+                  <option value="all">Tutti i tipi</option>
+                  {propertyTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Zone Filter */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 block mb-2">Zona:</label>
+                <select
+                  value={zoneFilter}
+                  onChange={(e) => setZoneFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-700"
+                >
+                  <option value="all">Tutte le zone</option>
+                  {zones.map((zone) => (
+                    <option key={zone} value={zone}>
+                      {zone}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Favorites and Reset */}
+            <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
+              <Button
+                variant={showFavoritesOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className={showFavoritesOnly ? "bg-red-600 hover:bg-red-700" : ""}
+              >
+                ❤️ Preferiti ({favorites.length})
+              </Button>
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <X size={16} className="mr-1" />
+                  Ripristina filtri
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -121,26 +201,37 @@ export default function Home() {
           <p className="text-gray-600 font-semibold">
             {filteredListings.length} annunci trovati
             {searchTerm && ` per "${searchTerm}"`}
+            {showFavoritesOnly && " nei tuoi preferiti"}
           </p>
         </div>
 
         {/* Listings Grid */}
         {filteredListings.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredListings.map(({ listing, originalIndex }, index) => (
-              <div key={originalIndex} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                <ListingCard listing={listing} index={originalIndex} />
-              </div>
-            ))}
+            {filteredListings.map((listing, index) => {
+              // Recupera l'indice originale nel dataset completo
+              const originalIndex = (listings as Listing[]).indexOf(listing);
+              return (
+                <div key={originalIndex} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+                  <ListingCard 
+                    listing={listing} 
+                    index={originalIndex}
+                    isFavorite={isFavorite(originalIndex)}
+                    onToggleFavorite={toggleFavorite}
+                  />
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg mb-4">Nessun annuncio trovato</p>
+            <p className="text-gray-500 text-lg mb-4">
+              {showFavoritesOnly && favorites.length === 0
+                ? "Non hai ancora aggiunto annunci ai preferiti"
+                : "Nessun annuncio trovato"}
+            </p>
             <Button
-              onClick={() => {
-                setSearchTerm("");
-                setPriceFilter("all");
-              }}
+              onClick={resetFilters}
               className="bg-blue-700 hover:bg-blue-800"
             >
               Ripristina filtri

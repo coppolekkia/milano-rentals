@@ -1,6 +1,7 @@
-import { MapPin, Chrome as Home, ImageOff } from "lucide-react";
-import { useLocation } from "wouter";
+import { MapPin, Home, ImageOff, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import { getPropertyType } from "@/lib/listingFilters";
 
 interface Listing {
   title: string;
@@ -9,12 +10,26 @@ interface Listing {
   image: string;
 }
 
-export default function ListingCard({ listing, index }: { listing: Listing; index: number }) {
+interface ListingCardProps {
+  listing: Listing;
+  index: number;
+  isFavorite?: boolean;
+  onToggleFavorite?: (index: number) => void;
+}
+
+export default function ListingCard({ 
+  listing, 
+  index, 
+  isFavorite = false,
+  onToggleFavorite
+}: ListingCardProps) {
   const [, setLocation] = useLocation();
+
   // Estrae l'indirizzo dal titolo (tutto prima dell'ultima virgola)
   const addressParts = listing.title.split(",");
   const address = addressParts.slice(0, -1).join(",").trim();
   const zone = addressParts[addressParts.length - 1].trim();
+  const propertyType = getPropertyType(listing.title);
 
   // Estrae il numero dal prezzo
   const priceNumber = listing.price.replace(/[^0-9]/g, "");
@@ -22,17 +37,21 @@ export default function ListingCard({ listing, index }: { listing: Listing; inde
   // Verifica se l'immagine è valida
   const hasValidImage = listing.image && listing.image.trim() !== "";
 
-  const handleOpen = () => {
+  const handleClick = () => {
     setLocation(`/annuncio/${index}`);
+  };
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleFavorite) {
+      onToggleFavorite(index);
+    }
   };
 
   return (
     <div
       className="group block h-full cursor-pointer"
-      onClick={handleOpen}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter") handleOpen(); }}
+      onClick={handleClick}
     >
       <div className="h-full flex flex-col bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 hover:scale-105 transform">
         {/* Image Container */}
@@ -60,14 +79,34 @@ export default function ListingCard({ listing, index }: { listing: Listing; inde
               <ImageOff size={80} className="text-gray-400" />
             </div>
           )}
+          
           {/* Price Badge */}
           <div className="absolute bottom-3 right-3 bg-green-600 text-white px-3 py-1 rounded-lg font-bold text-sm shadow-lg">
             €{priceNumber}/mese
           </div>
+
+          {/* Favorite Button */}
+          <button
+            onClick={handleFavoriteClick}
+            className="absolute top-3 right-3 p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-200 hover:scale-110"
+            title={isFavorite ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"}
+          >
+            <Heart
+              size={20}
+              className={isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-red-500"}
+            />
+          </button>
         </div>
 
         {/* Content */}
         <div className="flex-1 p-4 flex flex-col">
+          {/* Type Badge */}
+          <div className="mb-2">
+            <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+              {propertyType}
+            </span>
+          </div>
+
           {/* Title */}
           <h3 className="font-bold text-lg text-slate-900 mb-2 line-clamp-2 group-hover:text-blue-700 transition-colors">
             {address}
@@ -88,7 +127,10 @@ export default function ListingCard({ listing, index }: { listing: Listing; inde
           {/* Button */}
           <Button
             className="mt-auto w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold"
-            onClick={handleOpen}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClick();
+            }}
           >
             Visualizza Annuncio
           </Button>
